@@ -33,6 +33,18 @@ const B = {
 const SERIF = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 const SANS  = Platform.OS === 'ios' ? 'System'  : 'sans-serif';
 
+/* ── Scroll hint ─────────────────────────────────────────────────── */
+const ScrollHint = ({ text, color = 'rgba(100,100,95,0.45)' }: { text?: string; color?: string }) => (
+  <View style={[sty.scrollHint, { pointerEvents: 'none' as any }]}>
+    {text ? (
+      <Text style={{ fontSize: 10, color, letterSpacing: 2, textTransform: 'uppercase', fontFamily: SANS }}>
+        {text}
+      </Text>
+    ) : null}
+    <Text style={{ fontSize: 22, color, lineHeight: 22 }}>⌄</Text>
+  </View>
+);
+
 /* ── Data ────────────────────────────────────────────────────────── */
 const steps = [
   { emoji: '🌱', accent: B.primary, label: 'Organically Grown',  desc: "Camarosa variety cultivated in Kodaikanal's cool climate with zero synthetic inputs." },
@@ -310,6 +322,7 @@ export default function ProcessScreen({ navigation }: Props) {
                 ))}
               </View>
             </ScrollView>
+            <ScrollHint />
           </View>
 
           {/* ══ CARD 2 ─ Lab Report Summary ════════════════════════ */}
@@ -383,6 +396,7 @@ export default function ProcessScreen({ navigation }: Props) {
                 </View>
               </View>
             </View>
+            <ScrollHint />
           </View>
 
           {/* ══ CARD 3 ─ Lab PDF Page 1 ════════════════════════════ */}
@@ -412,6 +426,7 @@ export default function ProcessScreen({ navigation }: Props) {
                 TC-16406 Accredited · Analysed 08–11 Apr 2026
               </Text>
             </View>
+            <ScrollHint />
           </View>
 
           {/* ══ CARD 4 ─ Lab PDF Page 2 ════════════════════════════ */}
@@ -441,6 +456,7 @@ export default function ProcessScreen({ navigation }: Props) {
                 TC-16406 Accredited · Report issued 13 Apr 2026
               </Text>
             </View>
+            <ScrollHint />
           </View>
 
           {/* ══ CARD 5 ─ Our Commitment ════════════════════════════ */}
@@ -518,5 +534,13 @@ const sty = StyleSheet.create({
   card: {
     backgroundColor: '#FFFFFF',
     position: 'relative',
+  },
+  scrollHint: {
+    position: 'absolute',
+    bottom: 24,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    gap: 2,
   },
 });
