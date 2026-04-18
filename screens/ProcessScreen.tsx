@@ -230,7 +230,8 @@ export default function ProcessScreen({ navigation }: Props) {
   const flatRef = useRef<FlatList>(null);
   const currentPage = useRef(0);
   const [pdfUri, setPdfUri] = useState<string | null>(null);
-  const listHeightRef = useRef(PAGE_H);
+  const [listHeight, setListHeight] = useState(PAGE_H);
+  const layoutSet = useRef(false);
 
   const colW = Math.min(SCREEN_W, 480);
 
@@ -246,7 +247,7 @@ export default function ProcessScreen({ navigation }: Props) {
 
     /* ── CARD 1 ─ From Farm to Table ──────────────────────────────── */
     if (idx === 0) return (
-      <View style={[sty.card, { height: listHeightRef.current }]}>
+      <View style={[sty.card, { height: listHeight }]}>
         <ScrollView
           showsVerticalScrollIndicator={false}
           scrollEnabled={false}
@@ -293,7 +294,7 @@ export default function ProcessScreen({ navigation }: Props) {
 
     /* ── CARD 2 ─ Lab Report Summary ──────────────────────────────── */
     if (idx === 1) return (
-      <View style={[sty.card, { height: listHeightRef.current }]}>
+      <View style={[sty.card, { height: listHeight }]}>
         <View style={{ flex: 1, paddingHorizontal: 24,
           paddingTop: insets.top + 48, paddingBottom: insets.bottom + 24 }}>
 
@@ -369,7 +370,7 @@ export default function ProcessScreen({ navigation }: Props) {
 
     /* ── CARD 3 ─ Lab PDF Page 1 ──────────────────────────────────── */
     if (idx === 2) return (
-      <View style={[sty.card, { height: listHeightRef.current }]}>
+      <View style={[sty.card, { height: listHeight }]}>
         <View style={{ flex: 1, paddingHorizontal: 20,
           paddingTop: insets.top + 44, paddingBottom: insets.bottom + 24 }}>
 
@@ -401,7 +402,7 @@ export default function ProcessScreen({ navigation }: Props) {
 
     /* ── CARD 4 ─ Lab PDF Page 2 ──────────────────────────────────── */
     if (idx === 3) return (
-      <View style={[sty.card, { height: listHeightRef.current }]}>
+      <View style={[sty.card, { height: listHeight }]}>
         <View style={{ flex: 1, paddingHorizontal: 20,
           paddingTop: insets.top + 44, paddingBottom: insets.bottom + 24 }}>
 
@@ -433,7 +434,7 @@ export default function ProcessScreen({ navigation }: Props) {
 
     /* ── CARD 5 ─ Our Commitment ──────────────────────────────────── */
     return (
-      <View style={[sty.card, { height: listHeightRef.current, paddingHorizontal: 24,
+      <View style={[sty.card, { height: listHeight, paddingHorizontal: 24,
         paddingTop: insets.top + 48, paddingBottom: insets.bottom + 32 }]}>
 
         <Text style={{ textAlign: 'center', marginBottom: 6, fontSize: 22,
@@ -495,7 +496,7 @@ export default function ProcessScreen({ navigation }: Props) {
         </TouchableOpacity>
       </View>
     );
-  }, [insets, pdfUri, goBackToStory]);
+  }, [insets, pdfUri, goBackToStory, listHeight]);
 
   return (
     <View style={{ flex: 1, backgroundColor: '#fff', alignItems: 'center' }}>
@@ -505,19 +506,25 @@ export default function ProcessScreen({ navigation }: Props) {
           data={[0, 1, 2, 3, 4]}
           keyExtractor={(item) => String(item)}
           renderItem={renderCard}
-          pagingEnabled={true}
-          showsVerticalScrollIndicator={false}
+          snapToInterval={listHeight}
+          snapToAlignment="start"
           decelerationRate="fast"
+          showsVerticalScrollIndicator={false}
           bounces={false}
           overScrollMode="never"
-          getItemLayout={(_, index) => ({ length: listHeightRef.current, offset: listHeightRef.current * index, index })}
-          onLayout={(e) => { listHeightRef.current = e.nativeEvent.layout.height; }}
+          getItemLayout={(_, index) => ({ length: listHeight, offset: listHeight * index, index })}
+          onLayout={(e) => {
+            if (!layoutSet.current) {
+              layoutSet.current = true;
+              setListHeight(e.nativeEvent.layout.height);
+            }
+          }}
           removeClippedSubviews={false}
           maxToRenderPerBatch={5}
           windowSize={11}
           initialNumToRender={5}
           onMomentumScrollEnd={(e) => {
-            currentPage.current = Math.round(e.nativeEvent.contentOffset.y / listHeightRef.current);
+            currentPage.current = Math.round(e.nativeEvent.contentOffset.y / listHeight);
           }}
           style={{ flex: 1 }}
         />
