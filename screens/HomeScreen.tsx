@@ -118,6 +118,10 @@ export default function HomeScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const flatRef = useRef<FlatList>(null);
   const currentPage = useRef(0);
+  /* Measured height of the FlatList container — more reliable than
+     useWindowDimensions on Android where window height can include
+     the soft navigation bar, causing snapToInterval to drift. */
+  const [pageH, setPageH] = React.useState(SCREEN_H);
 
   const colW  = Math.min(SCREEN_W, 480);
   const innerW = colW - 48;
@@ -130,7 +134,7 @@ export default function HomeScreen({ navigation }: Props) {
         flatRef.current?.scrollToOffset({ offset: value, animated: false });
       });
       Animated.timing(anim, {
-        toValue: SCREEN_H,
+        toValue: pageH,
         duration: 900,
         easing: Easing.inOut(Easing.ease),
         useNativeDriver: false,
@@ -140,13 +144,13 @@ export default function HomeScreen({ navigation }: Props) {
       });
     }, 1500);
     return () => clearTimeout(timer);
-  }, [SCREEN_H]);
+  }, [pageH]);
 
   /* ── Render each card lazily ─────────────────────────────────── */
   const renderCard = useCallback(({ item: idx }: { item: number }) => {
     /* ── CARD 1 ─ Logo ─────────────────────────────────────────── */
     if (idx === 0) return (
-      <View style={[sty.card, { height: SCREEN_H, justifyContent: 'center', alignItems: 'center',
+      <View style={[sty.card, { height: pageH, justifyContent: 'center', alignItems: 'center',
         paddingHorizontal: 32, paddingTop: insets.top }]}>
         <Image source={logo} style={{ width: Math.min(colW * 0.98, colW - 8), height: 360 }} resizeMode="contain" />
         <ScrollHint text="Scroll Down" color="rgba(26,34,51,0.85)" />
@@ -155,7 +159,7 @@ export default function HomeScreen({ navigation }: Props) {
 
     /* ── CARD 2 ─ Our Strawberries ─────────────────────────────── */
     if (idx === 1) return (
-      <View style={[sty.card, { height: SCREEN_H }]}>
+      <View style={[sty.card, { height: pageH }]}>
         <View style={{ flex: 1, paddingHorizontal: 24, paddingTop: insets.top + 12, paddingBottom: 24, justifyContent: 'center' }}>
           <Text style={{ textAlign: 'center', marginBottom: 6, fontSize: 22,
             color: '#C0152A', letterSpacing: 3.1, textTransform: 'uppercase',
@@ -206,7 +210,7 @@ export default function HomeScreen({ navigation }: Props) {
 
     /* ── CARD 3 ─ Strawberry Preserve ──────────────────────────── */
     if (idx === 2) return (
-      <View style={[sty.card, { height: SCREEN_H, alignItems: 'center', paddingHorizontal: 32 }]}>
+      <View style={[sty.card, { height: pageH, alignItems: 'center', paddingHorizontal: 32 }]}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', gap: 10, paddingTop: insets.top }}>
           <View style={{ backgroundColor: C.red, borderRadius: 99, paddingHorizontal: 24, paddingVertical: 10,
             shadowColor: C.red, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.45, shadowRadius: 8, elevation: 5 }}>
@@ -227,9 +231,10 @@ export default function HomeScreen({ navigation }: Props) {
 
     /* ── CARD 4 ─ Contact ───────────────────────────────────────── */
     return (
-      <View style={[sty.card, { height: SCREEN_H }]}>
+      <View style={[sty.card, { height: pageH }]}>
         <ScrollView
           showsVerticalScrollIndicator={false}
+          nestedScrollEnabled={true}
           contentContainerStyle={{ paddingHorizontal: 22, paddingTop: insets.top,
             paddingBottom: insets.bottom, flexGrow: 1, justifyContent: 'center' }}
         >
@@ -277,30 +282,33 @@ export default function HomeScreen({ navigation }: Props) {
         </ScrollView>
       </View>
     );
-  }, [SCREEN_H, insets, colW, innerW, navigation]);
+  }, [pageH, insets, colW, innerW, navigation]);
 
   return (
     <View style={{ flex: 1, backgroundColor: '#fff', alignItems: 'center' }}>
-      <View style={{ width: colW, flex: 1, position: 'relative' }}>
+      <View
+        style={{ width: colW, flex: 1, position: 'relative' }}
+        onLayout={(e) => setPageH(e.nativeEvent.layout.height)}
+      >
         <FlatList
           ref={flatRef}
           data={[0, 1, 2, 3]}
           keyExtractor={(item) => String(item)}
           renderItem={renderCard}
-          snapToInterval={SCREEN_H}
+          snapToInterval={pageH}
           snapToAlignment="start"
           disableIntervalMomentum={true}
           showsVerticalScrollIndicator={false}
           decelerationRate="fast"
           bounces={false}
           overScrollMode="never"
-          getItemLayout={(_, index) => ({ length: SCREEN_H, offset: SCREEN_H * index, index })}
-          removeClippedSubviews={true}
-          maxToRenderPerBatch={1}
+          getItemLayout={(_, index) => ({ length: pageH, offset: pageH * index, index })}
+          removeClippedSubviews={false}
+          maxToRenderPerBatch={2}
           windowSize={3}
           initialNumToRender={2}
           onMomentumScrollEnd={(e) => {
-            currentPage.current = Math.round(e.nativeEvent.contentOffset.y / SCREEN_H);
+            currentPage.current = Math.round(e.nativeEvent.contentOffset.y / pageH);
           }}
           style={{ flex: 1 }}
         />

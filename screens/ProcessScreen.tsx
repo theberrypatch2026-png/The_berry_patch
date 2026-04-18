@@ -227,6 +227,7 @@ export default function ProcessScreen({ navigation }: Props) {
   const flatRef = useRef<FlatList>(null);
   const currentPage = useRef(0);
   const [pdfUri, setPdfUri] = useState<string | null>(null);
+  const [pageH, setPageH] = useState(SCREEN_H);
 
   const colW = Math.min(SCREEN_W, 480);
 
@@ -242,9 +243,10 @@ export default function ProcessScreen({ navigation }: Props) {
 
     /* ── CARD 1 ─ From Farm to Table ──────────────────────────────── */
     if (idx === 0) return (
-      <View style={[sty.card, { height: SCREEN_H }]}>
+      <View style={[sty.card, { height: pageH }]}>
         <ScrollView
           showsVerticalScrollIndicator={false}
+          nestedScrollEnabled={true}
           contentContainerStyle={{ paddingHorizontal: 20,
             paddingTop: insets.top + 16, paddingBottom: insets.bottom,
             alignItems: 'center' }}
@@ -288,7 +290,7 @@ export default function ProcessScreen({ navigation }: Props) {
 
     /* ── CARD 2 ─ Lab Report Summary ──────────────────────────────── */
     if (idx === 1) return (
-      <View style={[sty.card, { height: SCREEN_H }]}>
+      <View style={[sty.card, { height: pageH }]}>
         <View style={{ flex: 1, paddingHorizontal: 24,
           paddingTop: insets.top + 48, paddingBottom: 40 }}>
 
@@ -364,7 +366,7 @@ export default function ProcessScreen({ navigation }: Props) {
 
     /* ── CARD 3 ─ Lab PDF Page 1 ──────────────────────────────────── */
     if (idx === 2) return (
-      <View style={[sty.card, { height: SCREEN_H }]}>
+      <View style={[sty.card, { height: pageH }]}>
         <View style={{ flex: 1, paddingHorizontal: 20,
           paddingTop: insets.top + 44, paddingBottom: 48 }}>
 
@@ -396,7 +398,7 @@ export default function ProcessScreen({ navigation }: Props) {
 
     /* ── CARD 4 ─ Lab PDF Page 2 ──────────────────────────────────── */
     if (idx === 3) return (
-      <View style={[sty.card, { height: SCREEN_H }]}>
+      <View style={[sty.card, { height: pageH }]}>
         <View style={{ flex: 1, paddingHorizontal: 20,
           paddingTop: insets.top + 44, paddingBottom: 48 }}>
 
@@ -428,7 +430,7 @@ export default function ProcessScreen({ navigation }: Props) {
 
     /* ── CARD 5 ─ Our Commitment ──────────────────────────────────── */
     return (
-      <View style={[sty.card, { height: SCREEN_H, paddingHorizontal: 24,
+      <View style={[sty.card, { height: pageH, paddingHorizontal: 24,
         paddingTop: insets.top + 48, paddingBottom: insets.bottom + 32 }]}>
 
         <Text style={{ textAlign: 'center', marginBottom: 6, fontSize: 22,
@@ -490,30 +492,33 @@ export default function ProcessScreen({ navigation }: Props) {
         </TouchableOpacity>
       </View>
     );
-  }, [SCREEN_H, insets, pdfUri, goBackToStory]);
+  }, [pageH, insets, pdfUri, goBackToStory]);
 
   return (
     <View style={{ flex: 1, backgroundColor: '#fff', alignItems: 'center' }}>
-      <View style={{ width: colW, flex: 1 }}>
+      <View
+        style={{ width: colW, flex: 1 }}
+        onLayout={(e) => setPageH(e.nativeEvent.layout.height)}
+      >
         <FlatList
           ref={flatRef}
           data={[0, 1, 2, 3, 4]}
           keyExtractor={(item) => String(item)}
           renderItem={renderCard}
-          snapToInterval={SCREEN_H}
+          snapToInterval={pageH}
           snapToAlignment="start"
           disableIntervalMomentum={true}
           showsVerticalScrollIndicator={false}
           decelerationRate="fast"
           bounces={false}
           overScrollMode="never"
-          getItemLayout={(_, index) => ({ length: SCREEN_H, offset: SCREEN_H * index, index })}
-          removeClippedSubviews={true}
-          maxToRenderPerBatch={1}
+          getItemLayout={(_, index) => ({ length: pageH, offset: pageH * index, index })}
+          removeClippedSubviews={false}
+          maxToRenderPerBatch={2}
           windowSize={3}
           initialNumToRender={1}
           onMomentumScrollEnd={(e) => {
-            currentPage.current = Math.round(e.nativeEvent.contentOffset.y / SCREEN_H);
+            currentPage.current = Math.round(e.nativeEvent.contentOffset.y / pageH);
           }}
           style={{ flex: 1 }}
         />
