@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,8 +7,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   Platform,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
 } from 'react-native';
 import { useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,8 +14,6 @@ import { WebView } from 'react-native-webview';
 import { Asset } from 'expo-asset';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../App';
-
-const TOTAL_CARDS = 5;
 
 /* ── Grey-blue palette ───────────────────────────────────────────── */
 const B = {
@@ -34,7 +30,7 @@ const SERIF = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 const SANS  = Platform.OS === 'ios' ? 'System'  : 'sans-serif';
 
 /* ── Scroll hint ─────────────────────────────────────────────────── */
-const ScrollHint = ({ text, color = 'rgba(26,34,51,0.85)' }: { text?: string; color?: string }) => (
+const ScrollHint = ({ text, color = 'rgba(100,100,95,0.45)' }: { text?: string; color?: string }) => (
   <View style={[sty.scrollHint, { pointerEvents: 'none' as any }]}>
     {text ? (
       <Text style={{ fontSize: 10, color, letterSpacing: 2, textTransform: 'uppercase', fontFamily: SANS }}>
@@ -96,15 +92,18 @@ const buildPdfHtml = (pdfUri: string, pageNumber: number) => `<!DOCTYPE html>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     html,body{width:100%;height:100%;overflow:hidden;background:#f0f0f0}
+    /* outer: panning only — no browser pinch-zoom on the page */
     #wrap{
       width:100%;height:100%;
-      overflow:hidden;
-      touch-action:none;
-      display:flex;justify-content:center;align-items:center;
+      overflow:auto;
+      -webkit-overflow-scrolling:touch;
+      touch-action:pan-x pan-y;
+      display:flex;justify-content:center;align-items:flex-start;
     }
+    /* inner canvas wrapper receives scale transforms */
     #cw{
       display:inline-block;
-      transform-origin:center center;
+      transform-origin:top center;
       transition:transform 0.05s linear;
     }
     canvas{display:block;box-shadow:0 2px 10px rgba(0,0,0,0.18);}
@@ -236,9 +235,6 @@ export default function ProcessScreen({ navigation }: Props) {
   const { height: SCREEN_H, width: SCREEN_W } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
-  const [scrollEnabled, setScrollEnabled] = useState(true);
-  const dragStartY = useRef(0);
-  const currentPage = useRef(0);
   const [pdfUri, setPdfUri] = useState<string | null>(null);
 
   const colW = Math.min(SCREEN_W, 480);
@@ -249,28 +245,7 @@ export default function ProcessScreen({ navigation }: Props) {
     }).catch(() => {});
   }, []);
 
-  const goTo = useCallback((index: number) => {
-    const clamped = Math.max(0, Math.min(TOTAL_CARDS - 1, index));
-    currentPage.current = clamped;
-    setScrollEnabled(false);
-    scrollRef.current?.scrollTo({ y: clamped * SCREEN_H, animated: true });
-    setTimeout(() => setScrollEnabled(true), 500);
-  }, [SCREEN_H]);
-
   const goBackToStory = () => navigation.goBack();
-
-  const onDragStart = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    dragStartY.current = e.nativeEvent.contentOffset.y;
-  };
-
-  const onDragEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const diff = e.nativeEvent.contentOffset.y - dragStartY.current;
-    if (Math.abs(diff) < 15) {
-      scrollRef.current?.scrollTo({ y: currentPage.current * SCREEN_H, animated: true });
-      return;
-    }
-    goTo(currentPage.current + (diff > 0 ? 1 : -1));
-  };
 
   return (
     <View style={{ flex: 1, backgroundColor: '#fff', alignItems: 'center' }}>
@@ -279,13 +254,9 @@ export default function ProcessScreen({ navigation }: Props) {
         <ScrollView
           ref={scrollRef}
           pagingEnabled
-          disableIntervalMomentum={true}
-          scrollEnabled={scrollEnabled}
           showsVerticalScrollIndicator={false}
           scrollEventThrottle={16}
-          decelerationRate={0.95}
-          onScrollBeginDrag={onDragStart}
-          onScrollEndDrag={onDragEnd}
+          decelerationRate="fast"
           style={{ flex: 1 }}
         >
           {/* ══ CARD 1 ─ From Farm to Table ════════════════════════ */}
@@ -303,7 +274,7 @@ export default function ProcessScreen({ navigation }: Props) {
 
               <Text style={{ textAlign: 'center', marginBottom: 14, fontSize: 18,
                 color: '#C0152A', letterSpacing: 5, textTransform: 'uppercase',
-                fontFamily: SERIF, fontWeight: '600' }}>
+                fontFamily: SANS, fontWeight: '600' }}>
                 Behind the scenes
               </Text>
               <Text style={{ textAlign: 'center', marginBottom: 14, fontSize: 20,
@@ -313,7 +284,7 @@ export default function ProcessScreen({ navigation }: Props) {
 
               <View style={{ width: '100%', alignItems: 'center' }}>
                 {steps.map(({ emoji, accent, label, desc }, i) => (
-                  <View key={label} style={{ alignItems: 'center', width: '100%',padding:5 }}>
+                  <View key={label} style={{ alignItems: 'center', width: '100%', padding: 5 }}>
                     <View style={{ width: 44, height: 44, borderRadius: 22,
                       backgroundColor: accent, justifyContent: 'center', alignItems: 'center' }}>
                       <Text style={{ fontSize: 20 }}>{emoji}</Text>
@@ -330,7 +301,7 @@ export default function ProcessScreen({ navigation }: Props) {
                 ))}
               </View>
             </ScrollView>
-            <ScrollHint text="Scroll Down" color="rgba(26,34,51,0.85)" />
+            <ScrollHint text="Scroll Down" color="rgba(80,80,75,0.75)" />
           </View>
 
           {/* ══ CARD 2 ─ Lab Report Summary ════════════════════════ */}
@@ -345,7 +316,7 @@ export default function ProcessScreen({ navigation }: Props) {
                   <Text style={{ fontSize: 20 }}>🧪</Text>
                 </View>
                 <Text style={{ fontSize: 13, color: B.primary, fontWeight: '700',
-                  letterSpacing: 5.1, textTransform: 'uppercase', fontFamily: SERIF }}>
+                  letterSpacing: 5.1, textTransform: 'uppercase', fontFamily: SANS }}>
                   Lab Certified
                 </Text>
               </View>
@@ -371,7 +342,7 @@ export default function ProcessScreen({ navigation }: Props) {
                     <View style={{ flex: 1 }}>
                       <View style={{ alignSelf: 'center', borderBottomWidth: 2, borderBottomColor: B.dark, marginBottom: 6 }}>
                         <Text style={{ fontSize: 15, textAlign:'center', letterSpacing: 1.9, fontWeight:'600', color: B.dark,
-                          textTransform: 'uppercase', fontFamily: SERIF }}>
+                          textTransform: 'uppercase', fontFamily: SANS }}>
                           {label}
                         </Text>
                       </View>
@@ -395,7 +366,7 @@ export default function ProcessScreen({ navigation }: Props) {
                 <Text style={{ fontSize: 22 }}>🧪</Text>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 14, color: B.primary, fontWeight: '700',
-                    fontFamily: SERIF }}>
+                    fontFamily: SANS }}>
                     Food Safety Referral Laboratory
                   </Text>
                   <Text style={{ fontSize: 13, color: B.muted, fontFamily: SANS }}>
@@ -473,7 +444,7 @@ export default function ProcessScreen({ navigation }: Props) {
 
             <Text style={{ textAlign: 'center', marginBottom: 6, fontSize: 22,
               color: '#C0152A', letterSpacing: 5.1, textTransform: 'uppercase',
-              fontFamily: SERIF, fontWeight: '600' }}>
+              fontFamily: SANS, fontWeight: '600' }}>
               Our Promise
             </Text>
             <Text style={{ textAlign: 'center', fontSize: 20, fontWeight: '700',
@@ -481,7 +452,6 @@ export default function ProcessScreen({ navigation }: Props) {
               Our Commitment
             </Text>
 
-            {/* Everything below "Our Commitment" is centre-aligned */}
             <Text style={{ textAlign: 'center', fontSize: 16, color: '#108333',
               lineHeight: 24, marginBottom: 28, fontFamily: SANS }}>
               Every strawberry reflects a commitment to clean and healthy food for our valuable families.
@@ -525,7 +495,7 @@ export default function ProcessScreen({ navigation }: Props) {
                 shadowOpacity: 0.38, shadowRadius: 10, elevation: 6 }}
             >
               <Text style={{ color: 'white', fontSize: 18 }}>←</Text>
-              <Text style={{ color: 'white', fontSize: 16, textTransform:'uppercase',fontWeight: '700',
+              <Text style={{ color: 'white', fontSize: 16, textTransform:'uppercase', fontWeight: '700',
                 letterSpacing: 0.6, fontFamily: SANS }}>
                 Back to Strawberrys
               </Text>

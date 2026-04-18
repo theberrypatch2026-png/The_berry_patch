@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback, useEffect } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,6 @@ import {
   Linking,
   StyleSheet,
   Platform,
-  Animated,
-  Easing,
   NativeScrollEvent,
   NativeSyntheticEvent,
 } from 'react-native';
@@ -25,9 +23,6 @@ const heroImg2   = require('../assets/real-farm2.jpg');
 const berriesImg = require('../assets/real-berries.jpg');
 const whatsappIcon = require('../assets/whatsapp-icon.jpg');
 const instagramIcon = require('../assets/instagram-icon.jpg');
-
-
-const TOTAL_CARDS = 3;
 
 /* ── Berry colour palette (same as web) ─────────────────────────── */
 const C = {
@@ -45,7 +40,7 @@ const SERIF  = Platform.OS === 'ios' ? 'Georgia'        : 'serif';
 const SANS   = Platform.OS === 'ios' ? 'System'         : 'sans-serif';
 
 /* ── Scroll hint ─────────────────────────────────────────────────── */
-const ScrollHint = ({ text, color = 'rgba(26,34,51,0.85)' }: { text?: string; color?: string }) => (
+const ScrollHint = ({ text, color = 'rgba(100,100,95,0.45)' }: { text?: string; color?: string }) => (
   <View style={[sty.scrollHint, { pointerEvents: 'none' as any }]}>
     {text ? (
       <Text style={{ fontSize: 10, color, letterSpacing: 2, textTransform: 'uppercase', fontFamily: SANS }}>
@@ -60,18 +55,22 @@ const ScrollHint = ({ text, color = 'rgba(26,34,51,0.85)' }: { text?: string; co
 const ImageCarousel = ({ containerWidth }: { containerWidth: number }) => {
   const images = [heroImg, heroImg2, berriesImg];
   const [active, setActive] = useState(0);
+  const activeRef = useRef(0);
   const scrollRef = useRef<ScrollView>(null);
   const imgW = containerWidth;
 
-  const goTo = (i: number) => {
-    const next = Math.max(0, Math.min(images.length - 1, i));
-    setActive(next);
-    scrollRef.current?.scrollTo({ x: next * imgW, animated: true });
+  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const idx = Math.round(e.nativeEvent.contentOffset.x / imgW);
+    if (idx !== activeRef.current) {
+      activeRef.current = idx;
+      setActive(idx);
+    }
   };
 
-  const syncDot = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const idx = Math.round(e.nativeEvent.contentOffset.x / imgW);
-    setActive(idx);
+  const goTo = (i: number) => {
+    activeRef.current = i;
+    setActive(i);
+    scrollRef.current?.scrollTo({ x: i * imgW, animated: true });
   };
 
   return (
@@ -80,13 +79,12 @@ const ImageCarousel = ({ containerWidth }: { containerWidth: number }) => {
         ref={scrollRef}
         horizontal
         pagingEnabled
-        disableIntervalMomentum={true}
         showsHorizontalScrollIndicator={false}
         decelerationRate="fast"
         scrollEventThrottle={16}
-        onScroll={syncDot}
-        onScrollEndDrag={syncDot}
-        onMomentumScrollEnd={syncDot}
+        onScroll={onScroll}
+        onMomentumScrollEnd={onScroll}
+        onScrollEndDrag={onScroll}
         style={{ borderRadius: 16, height: 260 }}
         contentContainerStyle={{ width: imgW * images.length }}
       >
@@ -126,58 +124,10 @@ export default function HomeScreen({ navigation }: Props) {
   const { height: SCREEN_H, width: SCREEN_W } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
-  const [activeCard, setActiveCard] = useState(0);
-
-  useEffect(() => {
-    const scrollTimer = setTimeout(() => {
-      const anim = new Animated.Value(0);
-      anim.addListener(({ value }) => {
-        scrollRef.current?.scrollTo({ y: value, animated: false });
-      });
-      Animated.timing(anim, {
-        toValue: SCREEN_H,
-        duration: 900,
-        easing: Easing.inOut(Easing.ease),
-        useNativeDriver: false,
-      }).start(() => {
-        anim.removeAllListeners();
-        currentPage.current = 1;
-        setActiveCard(1);
-      });
-    }, 1500);
-    return () => clearTimeout(scrollTimer);
-  }, [SCREEN_H]);
-
   // Width of content column (mirror web's maxWidth: 480)
   const colW = Math.min(SCREEN_W, 480);
   // Inner padding left/right matches px-6 (24px each side)
   const innerW = colW - 48;
-
-  const [scrollEnabled, setScrollEnabled] = useState(true);
-  const dragStartY = useRef(0);
-  const currentPage = useRef(0);
-
-  const goTo = useCallback((index: number) => {
-    const clamped = Math.max(0, Math.min(TOTAL_CARDS - 1, index));
-    currentPage.current = clamped;
-    setActiveCard(clamped);
-    setScrollEnabled(false);
-    scrollRef.current?.scrollTo({ y: clamped * SCREEN_H, animated: true });
-    setTimeout(() => setScrollEnabled(true), 500);
-  }, [SCREEN_H]);
-
-  const onDragStart = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    dragStartY.current = e.nativeEvent.contentOffset.y;
-  };
-
-  const onDragEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const diff = e.nativeEvent.contentOffset.y - dragStartY.current;
-    if (Math.abs(diff) < 15) {
-      scrollRef.current?.scrollTo({ y: currentPage.current * SCREEN_H, animated: true });
-      return;
-    }
-    goTo(currentPage.current + (diff > 0 ? 1 : -1));
-  };
 
   return (
     <View style={{ flex: 1, backgroundColor: '#fff', alignItems: 'center' }}>
@@ -186,13 +136,10 @@ export default function HomeScreen({ navigation }: Props) {
         <ScrollView
           ref={scrollRef}
           pagingEnabled
-          disableIntervalMomentum={true}
-          scrollEnabled={scrollEnabled}
           showsVerticalScrollIndicator={false}
           scrollEventThrottle={16}
-          decelerationRate={0.95}
-          onScrollBeginDrag={onDragStart}
-          onScrollEndDrag={onDragEnd}
+          decelerationRate="fast"
+
           style={{ flex: 1 }}
         >
           {/* ══ CARD 1 ─ Logo ══════════════════════════════════════ */}
@@ -203,7 +150,7 @@ export default function HomeScreen({ navigation }: Props) {
               style={{ width: Math.min(colW * 0.98, colW - 8), height: 360 }}
               resizeMode="contain"
             />
-            <ScrollHint text="Scroll Down" color="rgba(26,34,51,0.85)" />
+            <ScrollHint text="Scroll Down" color="rgba(80,80,75,0.75)" />
           </View>
 
           {/* ══ CARD 2 ─ Our Strawberries ══════════════════════════ */}
@@ -229,7 +176,7 @@ export default function HomeScreen({ navigation }: Props) {
                 backgroundColor: 'rgba(193,140,93,0.05)', borderRadius: 10,
                 borderTopRightRadius: 10, borderBottomRightRadius: 10 }}>
                 <Text style={{ fontStyle: 'italic', fontWeight: '600', color: C.dark,
-                  lineHeight: 22, fontSize: 15, fontFamily: SANS }}>
+                  lineHeight: 22, fontSize: 15, fontFamily: SERIF }}>
                   In the quiet hills of Kodaikanal, The Berry Patch began with a simple
                   idea — to grow strawberries the right way.
                 </Text>
@@ -277,7 +224,6 @@ export default function HomeScreen({ navigation }: Props) {
           <View style={[sty.card, { height: SCREEN_H, alignItems: 'center',
             paddingHorizontal: 32 }]}>
 
-            {/* All content in one centred block */}
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', gap: 10,
               paddingTop: insets.top }}>
               <View style={{ backgroundColor: C.red, borderRadius: 99,
@@ -384,7 +330,6 @@ const DotNav = ({
   total: number; active: number; color: string; inactiveColor: string;
   onPress: (i: number) => void; screenH: number;
 }) => {
-  // Each dot: 10px or 26px height + 10px gap. Total ≈ (total * 10) + ((total-1) * 10) + 16 extra
   const dotTotalH = total * 10 + (total - 1) * 10;
   const topOffset = (screenH - dotTotalH) / 2;
 
