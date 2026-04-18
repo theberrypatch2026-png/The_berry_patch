@@ -12,9 +12,7 @@ import {
 } from 'react-native';
 import { useWindowDimensions } from 'react-native';
 
-const PAGE_H  = Dimensions.get('window').height;
-const CARD_H: any  = Platform.OS === 'web' ? '100vh' : PAGE_H;
-const WEB_SNAP: any = Platform.OS === 'web' ? { scrollSnapAlign: 'start' } : null;
+const PAGE_H = Dimensions.get('window').height;
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { Asset } from 'expo-asset';
@@ -37,8 +35,8 @@ const SERIF = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 const SANS  = Platform.OS === 'ios' ? 'System'  : 'sans-serif';
 
 /* ── Scroll hint ─────────────────────────────────────────────────── */
-const ScrollHint = ({ text, color = 'rgba(26,34,51,0.85)' }: { text?: string; color?: string }) => (
-  <View style={[sty.scrollHint, { pointerEvents: 'none' as any }]}>
+const ScrollHint = ({ text, color = 'rgba(26,34,51,0.85)', bottomOffset = 0 }: { text?: string; color?: string; bottomOffset?: number }) => (
+  <View style={[sty.scrollHint, { bottom: bottomOffset + 8, pointerEvents: 'none' as any }]}>
     {text ? (
       <Text style={{ fontSize: 10, color, letterSpacing: 2, textTransform: 'uppercase', fontFamily: SANS }}>
         {text}
@@ -232,6 +230,7 @@ export default function ProcessScreen({ navigation }: Props) {
   const flatRef = useRef<FlatList>(null);
   const currentPage = useRef(0);
   const [pdfUri, setPdfUri] = useState<string | null>(null);
+  const listHeightRef = useRef(PAGE_H);
 
   const colW = Math.min(SCREEN_W, 480);
 
@@ -247,40 +246,40 @@ export default function ProcessScreen({ navigation }: Props) {
 
     /* ── CARD 1 ─ From Farm to Table ──────────────────────────────── */
     if (idx === 0) return (
-      <View style={[sty.card, { height: CARD_H }, WEB_SNAP]}>
+      <View style={[sty.card, { height: listHeightRef.current }]}>
         <ScrollView
           showsVerticalScrollIndicator={false}
           scrollEnabled={false}
           contentContainerStyle={{ paddingHorizontal: 20,
-            paddingTop: insets.top + 16, paddingBottom: insets.bottom,
+            paddingTop: insets.top + 10, paddingBottom: insets.bottom + 56,
             alignItems: 'center' }}
         >
-          <View style={{ width: '100%', alignItems: 'flex-start', marginBottom: 28 }}>
+          <View style={{ width: '100%', alignItems: 'flex-start', marginBottom: 14 }}>
             <BackBtn onPress={goBackToStory} />
           </View>
 
-          <Text style={{ textAlign: 'center', marginBottom: 14, fontSize: 18,
+          <Text style={{ textAlign: 'center', marginBottom: 6, fontSize: 18,
             color: '#C0152A', letterSpacing: 5, textTransform: 'uppercase',
             fontFamily: SERIF, fontWeight: '600' }}>
             Behind the scenes
           </Text>
-          <Text style={{ textAlign: 'center', marginBottom: 14, fontSize: 20,
-            fontWeight: '800', color: B.dark, lineHeight: 34, fontFamily: SERIF }}>
+          <Text style={{ textAlign: 'center', marginBottom: 10, fontSize: 20,
+            fontWeight: '800', color: B.dark, lineHeight: 30, fontFamily: SERIF }}>
             From Farm to Table
           </Text>
 
           <View style={{ width: '100%', alignItems: 'center' }}>
             {steps.map(({ emoji, accent, label, desc }) => (
-              <View key={label} style={{ alignItems: 'center', width: '100%', padding: 5 }}>
+              <View key={label} style={{ alignItems: 'center', width: '100%', paddingVertical: 4 }}>
                 <View style={{ width: 44, height: 44, borderRadius: 22,
                   backgroundColor: accent, justifyContent: 'center', alignItems: 'center' }}>
                   <Text style={{ fontSize: 20 }}>{emoji}</Text>
                 </View>
-                <Text style={{ fontSize: 17, fontWeight: '700', color: B.dark,
-                  marginTop: 10, marginBottom: 0, textAlign: 'center', fontFamily: SERIF }}>
+                <Text style={{ fontSize: 16, fontWeight: '700', color: B.dark,
+                  marginTop: 6, marginBottom: 0, textAlign: 'center', fontFamily: SERIF }}>
                   {label}
                 </Text>
-                <Text style={{ fontSize: 14, color: B.muted, lineHeight: 22,
+                <Text style={{ fontSize: 13, color: B.muted, lineHeight: 20,
                   textAlign: 'center', fontFamily: SANS, maxWidth: 300 }}>
                   {desc}
                 </Text>
@@ -288,15 +287,15 @@ export default function ProcessScreen({ navigation }: Props) {
             ))}
           </View>
         </ScrollView>
-        <ScrollHint text="Scroll Down" color="rgba(26,34,51,0.85)" />
+        <ScrollHint text="Scroll Down" color="rgba(26,34,51,0.85)" bottomOffset={insets.bottom} />
       </View>
     );
 
     /* ── CARD 2 ─ Lab Report Summary ──────────────────────────────── */
     if (idx === 1) return (
-      <View style={[sty.card, { height: CARD_H }, WEB_SNAP]}>
+      <View style={[sty.card, { height: listHeightRef.current }]}>
         <View style={{ flex: 1, paddingHorizontal: 24,
-          paddingTop: insets.top + 48, paddingBottom: 40 }}>
+          paddingTop: insets.top + 48, paddingBottom: insets.bottom + 24 }}>
 
           <View style={{ alignItems: 'center', marginBottom: 10 }}>
             <View style={{ width: 44, height: 44, borderRadius: 22,
@@ -364,15 +363,15 @@ export default function ProcessScreen({ navigation }: Props) {
             </View>
           </View>
         </View>
-        <ScrollHint />
+        <ScrollHint bottomOffset={insets.bottom} />
       </View>
     );
 
     /* ── CARD 3 ─ Lab PDF Page 1 ──────────────────────────────────── */
     if (idx === 2) return (
-      <View style={[sty.card, { height: CARD_H }, WEB_SNAP]}>
+      <View style={[sty.card, { height: listHeightRef.current }]}>
         <View style={{ flex: 1, paddingHorizontal: 20,
-          paddingTop: insets.top + 44, paddingBottom: 48 }}>
+          paddingTop: insets.top + 44, paddingBottom: insets.bottom + 24 }}>
 
           <View style={{ alignItems: 'center', marginBottom: 16, gap: 4 }}>
             <Text style={{ fontSize: 13, color: '#C0152A', fontWeight: '700',
@@ -396,15 +395,15 @@ export default function ProcessScreen({ navigation }: Props) {
             TC-16406 Accredited · Analysed 08–11 Apr 2026
           </Text>
         </View>
-        <ScrollHint />
+        <ScrollHint bottomOffset={insets.bottom} />
       </View>
     );
 
     /* ── CARD 4 ─ Lab PDF Page 2 ──────────────────────────────────── */
     if (idx === 3) return (
-      <View style={[sty.card, { height: CARD_H }, WEB_SNAP]}>
+      <View style={[sty.card, { height: listHeightRef.current }]}>
         <View style={{ flex: 1, paddingHorizontal: 20,
-          paddingTop: insets.top + 44, paddingBottom: 48 }}>
+          paddingTop: insets.top + 44, paddingBottom: insets.bottom + 24 }}>
 
           <View style={{ alignItems: 'center', marginBottom: 16, gap: 4 }}>
             <Text style={{ fontSize: 13, color: '#C0152A', fontWeight: '700',
@@ -428,14 +427,14 @@ export default function ProcessScreen({ navigation }: Props) {
             TC-16406 Accredited · Report issued 13 Apr 2026
           </Text>
         </View>
-        <ScrollHint />
+        <ScrollHint bottomOffset={insets.bottom} />
       </View>
     );
 
     /* ── CARD 5 ─ Our Commitment ──────────────────────────────────── */
     return (
-      <View style={[sty.card, { height: CARD_H, paddingHorizontal: 24,
-        paddingTop: insets.top + 48, paddingBottom: insets.bottom + 32 }, WEB_SNAP]}>
+      <View style={[sty.card, { height: listHeightRef.current, paddingHorizontal: 24,
+        paddingTop: insets.top + 48, paddingBottom: insets.bottom + 32 }]}>
 
         <Text style={{ textAlign: 'center', marginBottom: 6, fontSize: 22,
           color: '#C0152A', letterSpacing: 5.1, textTransform: 'uppercase',
@@ -498,23 +497,6 @@ export default function ProcessScreen({ navigation }: Props) {
     );
   }, [insets, pdfUri, goBackToStory]);
 
-  /* ── Web: CSS scroll snapping ───────────────────────────────── */
-  if (Platform.OS === 'web') {
-    return (
-      <View style={{ flex: 1, backgroundColor: '#fff', alignItems: 'center' }}>
-        <View style={{ width: colW, flex: 1 }}>
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            style={[{ flex: 1 }, { scrollSnapType: 'y mandatory' } as any]}
-          >
-            {[0, 1, 2, 3, 4].map((idx) => renderCard({ item: idx }))}
-          </ScrollView>
-        </View>
-      </View>
-    );
-  }
-
-  /* ── Native: FlatList with snapToInterval ───────────────────── */
   return (
     <View style={{ flex: 1, backgroundColor: '#fff', alignItems: 'center' }}>
       <View style={{ width: colW, flex: 1 }}>
@@ -523,20 +505,19 @@ export default function ProcessScreen({ navigation }: Props) {
           data={[0, 1, 2, 3, 4]}
           keyExtractor={(item) => String(item)}
           renderItem={renderCard}
-          snapToInterval={PAGE_H}
-          snapToAlignment="start"
-          disableIntervalMomentum={true}
+          pagingEnabled={true}
           showsVerticalScrollIndicator={false}
           decelerationRate="fast"
           bounces={false}
           overScrollMode="never"
-          getItemLayout={(_, index) => ({ length: PAGE_H, offset: PAGE_H * index, index })}
+          getItemLayout={(_, index) => ({ length: listHeightRef.current, offset: listHeightRef.current * index, index })}
+          onLayout={(e) => { listHeightRef.current = e.nativeEvent.layout.height; }}
           removeClippedSubviews={false}
-          maxToRenderPerBatch={2}
-          windowSize={3}
-          initialNumToRender={1}
+          maxToRenderPerBatch={5}
+          windowSize={11}
+          initialNumToRender={5}
           onMomentumScrollEnd={(e) => {
-            currentPage.current = Math.round(e.nativeEvent.contentOffset.y / PAGE_H);
+            currentPage.current = Math.round(e.nativeEvent.contentOffset.y / listHeightRef.current);
           }}
           style={{ flex: 1 }}
         />
@@ -552,7 +533,6 @@ const sty = StyleSheet.create({
   },
   scrollHint: {
     position: 'absolute',
-    bottom: 24,
     left: 0,
     right: 0,
     alignItems: 'center',
