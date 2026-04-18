@@ -236,8 +236,9 @@ export default function ProcessScreen({ navigation }: Props) {
   const { height: SCREEN_H, width: SCREEN_W } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
-  const [activeCard, setActiveCard] = useState(0);
-  const isAnimating = useRef(false);
+  const [scrollEnabled, setScrollEnabled] = useState(true);
+  const dragStartY = useRef(0);
+  const currentPage = useRef(0);
   const [pdfUri, setPdfUri] = useState<string | null>(null);
 
   const colW = Math.min(SCREEN_W, 480);
@@ -250,18 +251,25 @@ export default function ProcessScreen({ navigation }: Props) {
 
   const goTo = useCallback((index: number) => {
     const clamped = Math.max(0, Math.min(TOTAL_CARDS - 1, index));
-    if (clamped === activeCard || isAnimating.current) return;
-    isAnimating.current = true;
+    currentPage.current = clamped;
+    setScrollEnabled(false);
     scrollRef.current?.scrollTo({ y: clamped * SCREEN_H, animated: true });
-    setActiveCard(clamped);
-    setTimeout(() => { isAnimating.current = false; }, 600);
-  }, [activeCard, SCREEN_H]);
+    setTimeout(() => setScrollEnabled(true), 500);
+  }, [SCREEN_H]);
 
   const goBackToStory = () => navigation.goBack();
 
-  const onScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const idx = Math.round(e.nativeEvent.contentOffset.y / SCREEN_H);
-    setActiveCard(idx);
+  const onDragStart = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    dragStartY.current = e.nativeEvent.contentOffset.y;
+  };
+
+  const onDragEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const diff = e.nativeEvent.contentOffset.y - dragStartY.current;
+    if (Math.abs(diff) < 15) {
+      scrollRef.current?.scrollTo({ y: currentPage.current * SCREEN_H, animated: true });
+      return;
+    }
+    goTo(currentPage.current + (diff > 0 ? 1 : -1));
   };
 
   return (
@@ -272,10 +280,12 @@ export default function ProcessScreen({ navigation }: Props) {
           ref={scrollRef}
           pagingEnabled
           disableIntervalMomentum={true}
+          scrollEnabled={scrollEnabled}
           showsVerticalScrollIndicator={false}
           scrollEventThrottle={16}
-          decelerationRate="normal"
-          onMomentumScrollEnd={onScrollEnd}
+          decelerationRate={0.95}
+          onScrollBeginDrag={onDragStart}
+          onScrollEndDrag={onDragEnd}
           style={{ flex: 1 }}
         >
           {/* ══ CARD 1 ─ From Farm to Table ════════════════════════ */}

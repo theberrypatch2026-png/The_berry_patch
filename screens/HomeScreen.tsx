@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Platform,
   Animated,
+  Easing,
   NativeScrollEvent,
   NativeSyntheticEvent,
 } from 'react-native';
@@ -59,22 +60,18 @@ const ScrollHint = ({ text, color = 'rgba(26,34,51,0.85)' }: { text?: string; co
 const ImageCarousel = ({ containerWidth }: { containerWidth: number }) => {
   const images = [heroImg, heroImg2, berriesImg];
   const [active, setActive] = useState(0);
-  const activeRef = useRef(0);
   const scrollRef = useRef<ScrollView>(null);
   const imgW = containerWidth;
 
-  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const idx = Math.round(e.nativeEvent.contentOffset.x / imgW);
-    if (idx !== activeRef.current) {
-      activeRef.current = idx;
-      setActive(idx);
-    }
+  const goTo = (i: number) => {
+    const next = Math.max(0, Math.min(images.length - 1, i));
+    setActive(next);
+    scrollRef.current?.scrollTo({ x: next * imgW, animated: true });
   };
 
-  const goTo = (i: number) => {
-    activeRef.current = i;
-    setActive(i);
-    scrollRef.current?.scrollTo({ x: i * imgW, animated: true });
+  const syncDot = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const idx = Math.round(e.nativeEvent.contentOffset.x / imgW);
+    setActive(idx);
   };
 
   return (
@@ -83,12 +80,13 @@ const ImageCarousel = ({ containerWidth }: { containerWidth: number }) => {
         ref={scrollRef}
         horizontal
         pagingEnabled
+        disableIntervalMomentum={true}
         showsHorizontalScrollIndicator={false}
         decelerationRate="fast"
         scrollEventThrottle={16}
-        onScroll={onScroll}
-        onMomentumScrollEnd={onScroll}
-        onScrollEndDrag={onScroll}
+        onScroll={syncDot}
+        onScrollEndDrag={syncDot}
+        onMomentumScrollEnd={syncDot}
         style={{ borderRadius: 16, height: 260 }}
         contentContainerStyle={{ width: imgW * images.length }}
       >
@@ -129,56 +127,57 @@ export default function HomeScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
   const [activeCard, setActiveCard] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const splashOpacity = useRef(new Animated.Value(1)).current;
-  const isAnimating = useRef(false);
 
   useEffect(() => {
-    const fadeTimer = setTimeout(() => {
-      Animated.timing(splashOpacity, {
-        toValue: 0,
-        duration: 600,
-        useNativeDriver: true,
-      }).start(() => setIsLoading(false));
-    }, 3400);
-    return () => clearTimeout(fadeTimer);
-  }, []);
-
-  useEffect(() => {
-    if (isLoading) return;
     const scrollTimer = setTimeout(() => {
-      scrollRef.current?.scrollTo({ y: SCREEN_H, animated: true });
-      setActiveCard(1);
+      const anim = new Animated.Value(0);
+      anim.addListener(({ value }) => {
+        scrollRef.current?.scrollTo({ y: value, animated: false });
+      });
+      Animated.timing(anim, {
+        toValue: SCREEN_H,
+        duration: 900,
+        easing: Easing.inOut(Easing.ease),
+        useNativeDriver: false,
+      }).start(() => {
+        anim.removeAllListeners();
+        currentPage.current = 1;
+        setActiveCard(1);
+      });
     }, 1500);
     return () => clearTimeout(scrollTimer);
-  }, [isLoading, SCREEN_H]);
+  }, [SCREEN_H]);
 
   // Width of content column (mirror web's maxWidth: 480)
   const colW = Math.min(SCREEN_W, 480);
   // Inner padding left/right matches px-6 (24px each side)
   const innerW = colW - 48;
 
+  const [scrollEnabled, setScrollEnabled] = useState(true);
+  const dragStartY = useRef(0);
+  const currentPage = useRef(0);
+
   const goTo = useCallback((index: number) => {
     const clamped = Math.max(0, Math.min(TOTAL_CARDS - 1, index));
-    if (clamped === activeCard || isAnimating.current) return;
-    isAnimating.current = true;
-    scrollRef.current?.scrollTo({ y: clamped * SCREEN_H, animated: true });
+    currentPage.current = clamped;
     setActiveCard(clamped);
-    setTimeout(() => { isAnimating.current = false; }, 600);
-  }, [activeCard, SCREEN_H]);
+    setScrollEnabled(false);
+    scrollRef.current?.scrollTo({ y: clamped * SCREEN_H, animated: true });
+    setTimeout(() => setScrollEnabled(true), 500);
+  }, [SCREEN_H]);
 
-  const onScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const idx = Math.round(e.nativeEvent.contentOffset.y / SCREEN_H);
-    setActiveCard(idx);
+  const onDragStart = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    dragStartY.current = e.nativeEvent.contentOffset.y;
   };
 
-  if (isLoading) {
-    return (
-      <Animated.View style={{ flex: 1, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', opacity: splashOpacity }}>
-        <Image source={logo} style={{ width: 260, height: 260 }} resizeMode="contain" />
-      </Animated.View>
-    );
-  }
+  const onDragEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const diff = e.nativeEvent.contentOffset.y - dragStartY.current;
+    if (Math.abs(diff) < 15) {
+      scrollRef.current?.scrollTo({ y: currentPage.current * SCREEN_H, animated: true });
+      return;
+    }
+    goTo(currentPage.current + (diff > 0 ? 1 : -1));
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: '#fff', alignItems: 'center' }}>
@@ -188,10 +187,12 @@ export default function HomeScreen({ navigation }: Props) {
           ref={scrollRef}
           pagingEnabled
           disableIntervalMomentum={true}
+          scrollEnabled={scrollEnabled}
           showsVerticalScrollIndicator={false}
           scrollEventThrottle={16}
-          decelerationRate="normal"
-          onMomentumScrollEnd={onScrollEnd}
+          decelerationRate={0.95}
+          onScrollBeginDrag={onDragStart}
+          onScrollEndDrag={onDragEnd}
           style={{ flex: 1 }}
         >
           {/* ══ CARD 1 ─ Logo ══════════════════════════════════════ */}
